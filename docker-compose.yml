@@ -1,0 +1,13 @@
+version: "3.8"
+
+services:
+  importer:
+    build: .
+    container_name: nedgex-importer
+    env_file:
+      - .env
+    volumes:
+      # Mount the data folder so that the generated CSV is available on the host
+      - ./data:/app/data
+      # Mount the src folder to allow live code updates during development
+      - ./src:/app/src

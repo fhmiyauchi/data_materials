@@ -1,0 +1,8 @@
+mp-api
+pandas
+pydantic
+ruff
+mypy
+pandas-stubs
+matminer
+sqlalchemy
