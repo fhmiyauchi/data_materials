@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   importer:
     build: .
@@ -7,7 +5,53 @@ services:
     env_file:
       - .env
     volumes:
-      # Mount the data folder so that the generated CSV is available on the host
+      # Mount the data folder so that the generated CSV/DB is available on the host
       - ./data:/app/data
       # Mount the src folder to allow live code updates during development
       - ./src:/app/src
+
+  superset-redis:
+    image: redis:7
+    container_name: superset_cache
+    volumes:
+      - superset_redis_data:/data
+
+  superset-init:
+    image: apache/superset:latest
+    container_name: superset_init
+    command: ["/app/docker-init.sh"]
+    env_file:
+      - .env
+    environment:
+      PYTHONPATH: /app/pythonpath
+    volumes:
+      - ./src/eda/superset_config.py:/app/pythonpath/superset_config.py
+      - ./src/eda/superset-init.sh:/app/docker-init.sh
+      # Dedicated volume for Superset's own metadata (dashboards, charts, users)
+      - superset_home:/app/superset_home
+      # Mount materials.db read-only for EDA
+      - ./data:/app/data:ro
+    depends_on:
+      - superset-redis
+
+  superset:
+    image: apache/superset:latest
+    container_name: superset_app
+    env_file:
+      - .env
+    environment:
+      PYTHONPATH: /app/pythonpath
+    volumes:
+      - ./src/eda/superset_config.py:/app/pythonpath/superset_config.py
+      - superset_home:/app/superset_home
+      # Mount materials.db read-only for EDA
+      - ./data:/app/data:ro
+    ports:
+      - "8088:8088"
+    depends_on:
+      - superset-redis
+      - superset-init
+
+volumes:
+  superset_home:
+  superset_redis_data:
