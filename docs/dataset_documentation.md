@@ -9,13 +9,12 @@ This document describes the datasets exported and compiled by the NEDGEX Data Im
 ## 1. Core Materials Dataset
 **Source:** Materials Project API (`mp-api`)  
 **Filename:** `core_materials.csv`  
+**SQLite Table:** `properties_core`
 **Size:** ~19.44 MB  |  **Records:** 154,879  
 **Description:** A comprehensive snapshot of the Materials Project database containing fundamental macroscopic, electronic, and structural properties of crystalline materials.
 
-**Fields:**
-- `material_id`: Unique identifier from Materials Project.
-- `formula`: Chemical formula.
-- `elements`: Comma-separated list of constituent elements.
+**Fields (in SQLite `properties_core`):**
+- `material_id`: Unique identifier from Materials Project (Foreign Key).
 - `density`: Calculated physical density (g/cm³).
 - `band_gap`: Energy band gap in electron-volts (eV).
 - `is_metal`: Boolean flag indicating if the material is metallic.
@@ -30,11 +29,14 @@ This document describes the datasets exported and compiled by the NEDGEX Data Im
 ## 2. Experimental Battery Band Gaps
 **Source:** Matbench / Matminer (`matbench_expt_gap`)  
 **Filename:** `battery_materials.csv`  
+**SQLite Table:** `experiments_battery`
 **Size:** ~0.06 MB  |  **Records:** 4,604  
 **Description:** Experimental band gaps of various materials, highly relevant for screening electrolytes and battery components.
 
-**Fields:**
-- `composition`: The chemical composition.
+**Fields (in SQLite `experiments_battery`):**
+- `id`: Auto-generated integer primary key.
+- `standard_formula`: Standardized chemical formula (Foreign Key).
+- `composition`: Original chemical composition string.
 - `gap expt`: The experimentally observed band gap.
 
 ---
@@ -42,44 +44,52 @@ This document describes the datasets exported and compiled by the NEDGEX Data Im
 ## 3. Dielectric Constant Dataset
 **Source:** Matminer / Figshare (`dielectric_constant`)  
 **Filename:** `dielectric_constant.csv`  
+**SQLite Table:** `properties_dielectric`
 **Size:** ~5.87 MB  |  **Records:** 86,075  
 **Description:** Tensorial and scalar dielectric properties of materials, useful for identifying novel insulators or capacitors.
 
-**Fields:**
-- `material_id`, `formula`, `nsites`, `space_group`, `volume`, `structure`, `band_gap`
+**Fields (in SQLite `properties_dielectric`):**
+- `material_id`: Foreign Key linking to `materials` table.
+- `formula`, `nsites`, `space_group`, `volume`, `band_gap`: Additional structural metadata.
 - `e_electronic`: Electronic contribution to dielectric constant.
 - `e_total`: Total dielectric constant.
 - `n`: Refractive index.
 - `poly_electronic`, `poly_total`: Polycrystalline averages.
 - `pot_ferroelectric`: Potential ferroelectric flag.
-- `cif`, `meta`, `poscar`: Raw structural string representations.
+*(Note: `structure`, `cif`, `meta`, and `poscar` columns were dropped during ETL).*
 
 ---
 
 ## 4. Elasticity Dataset (2015)
 **Source:** Matminer / Figshare (`elastic_tensor_2015`)  
 **Filename:** `elastic_tensor_2015.csv`  
+**SQLite Table:** `properties_elastic`
 **Size:** ~5.58 MB  |  **Records:** 144,854  
 **Description:** Mechanical and elastic properties calculated via DFT.
 
-**Fields:**
-- `material_id`, `formula`, `nsites`, `space_group`, `volume`, `structure`
+**Fields (in SQLite `properties_elastic`):**
+- `material_id`: Foreign Key linking to `materials` table.
+- `formula`, `nsites`, `space_group`, `volume`: Additional structural metadata.
 - `elastic_anisotropy`: Measure of directional mechanical dependence.
 - `G_Reuss`, `G_VRH`, `G_Voigt`: Shear moduli bounds.
 - `K_Reuss`, `K_VRH`, `K_Voigt`: Bulk moduli bounds.
 - `poisson_ratio`: Ratio of transverse to axial strain.
 - `compliance_tensor`, `elastic_tensor`, `elastic_tensor_original`: Full tensorial data.
-- `cif`, `kpoint_density`, `poscar`: Structural representations.
+- `kpoint_density`: Density of k-points grid.
+*(Note: `structure`, `poscar`, and `cif` columns were dropped during ETL).*
 
 ---
 
 ## 5. Matbench Phonons
 **Source:** Matbench / Matminer (`matbench_phonons`)  
 **Filename:** `matbench_phonons.csv`  
+**SQLite Table:** `structures_phonons`
 **Size:** ~0.71 MB  |  **Records:** 19,641  
 **Description:** Highest frequency optical phonon mode peak (useful for thermal conductivity analytics).
 
-**Fields:**
+**Fields (in SQLite `structures_phonons`):**
+- `id`: Auto-generated integer primary key.
+- `standard_formula`: Standardized chemical formula parsed from the structure JSON (Foreign Key).
 - `structure`: JSON/Dict representation of the crystal structure.
 - `last phdos peak`: The highest frequency peak in the phonon density of states.
 
@@ -88,10 +98,13 @@ This document describes the datasets exported and compiled by the NEDGEX Data Im
 ## 6. Matbench MP Gap
 **Source:** Matbench / Matminer (`matbench_mp_gap`)  
 **Filename:** `matbench_mp_gap.csv`  
+**SQLite Table:** `structures_mp_gap`
 **Size:** ~180.36 MB  |  **Records:** 4,033,888 (incl. structure string representations)  
 **Description:** A massive dataset correlating structural inputs to DFT-calculated PBE band gaps.
 
-**Fields:**
+**Fields (in SQLite `structures_mp_gap`):**
+- `id`: Auto-generated integer primary key.
+- `standard_formula`: Standardized chemical formula parsed from the structure JSON (Foreign Key).
 - `structure`: JSON/Dict representation of the crystal structure.
 - `gap pbe`: PBE calculated band gap.
 
@@ -100,11 +113,14 @@ This document describes the datasets exported and compiled by the NEDGEX Data Im
 ## 7. Steel Strength
 **Source:** Matminer / Figshare (`steel_strength`)  
 **Filename:** `steel_strength.csv`  
+**SQLite Table:** `experiments_steel`
 **Size:** ~0.06 MB  |  **Records:** 312  
 **Description:** Experimental mechanical properties of various steel alloys based on their elemental composition.
 
-**Fields:**
-- `formula`: Alloy formula.
+**Fields (in SQLite `experiments_steel`):**
+- `id`: Auto-generated integer primary key.
+- `standard_formula`: Standardized chemical formula (Foreign Key).
+- `formula`: Original alloy formula string.
 - Elements: `c`, `mn`, `si`, `cr`, `ni`, `mo`, `v`, `n`, `nb`, `co`, `w`, `al`, `ti` (Weight percentages of alloying elements).
 - `yield strength`: Yield stress.
 - `tensile strength`: Ultimate tensile strength.
