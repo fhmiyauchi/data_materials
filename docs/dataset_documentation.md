@@ -4,6 +4,8 @@ This document describes the datasets exported and compiled by the NEDGEX Data Im
 
 ---
 
+# PART I: Raw Datasets
+
 ## 1. Core Materials Dataset
 **Source:** Materials Project API (`mp-api`)  
 **Filename:** `core_materials.csv`  
@@ -110,7 +112,109 @@ This document describes the datasets exported and compiled by the NEDGEX Data Im
 
 ---
 
+# PART II: Transformed & Relational Schema (Star Schema)
+
+Following the ETL pipeline transformation, the raw datasets above are no longer isolated CSVs. They have been tightly integrated into a **Star Schema** within `data/materials.db` to allow seamless correlation analytics. 
+
+## 1. Master Formulas (Generated)
+**Source:** NEDGEX ETL Pipeline (`data_transformer.py`)  
+**Table:** `formulas` (SQLite)  
+**Records:** 107,408  
+**Description:** The centralized root lookup table for all unique chemical compositions across every dataset. The pipeline standardizes every formula into a reduced alphabetical string using `pymatgen` to guarantee 100% accurate JOINs.
+
+**Fields:**
+- `standard_formula`: Primary Key (e.g., `LiCoO2`).
+
+## 2. Master Materials (Generated)
+**Source:** NEDGEX ETL Pipeline (`data_transformer.py`)  
+**Table:** `materials` (SQLite)  
+**Records:** 154,879  
+**Description:** The master mapping table linking specific structural polymorphs to their parent formula. 
+
+**Fields:**
+- `material_id`: Primary Key (from Materials Project, e.g., `mp-149`).
+- `standard_formula`: Foreign Key linking to the `formulas` table.
+
+### Entity-Relationship Diagram
+
+```mermaid
+erDiagram
+    FORMULAS ||--o{ MATERIALS : "1 to Many (Polymorphs)"
+    FORMULAS ||--o{ EXPERIMENTS_BATTERY : "1 to Many"
+    FORMULAS ||--o{ EXPERIMENTS_STEEL : "1 to Many"
+    FORMULAS ||--o{ STRUCTURES_PHONONS : "1 to Many"
+    FORMULAS ||--o{ STRUCTURES_MP_GAP : "1 to Many"
+    
+    MATERIALS ||--|| PROPERTIES_CORE : "1 to 1"
+    MATERIALS ||--|| PROPERTIES_DIELECTRIC : "1 to 1"
+    MATERIALS ||--|| PROPERTIES_ELASTIC : "1 to 1"
+
+    FORMULAS {
+        string standard_formula PK
+    }
+    
+    MATERIALS {
+        string material_id PK
+        string standard_formula FK
+    }
+
+    PROPERTIES_CORE {
+        string material_id FK
+        float density
+        float band_gap
+        boolean is_metal
+    }
+
+    EXPERIMENTS_BATTERY {
+        int id PK
+        string standard_formula FK
+        float gap_expt
+    }
+```
+
+**The Golden Rule of Materials Science Data:** A chemical formula (e.g., `C`) does not uniquely identify a material. It can be graphite, diamond, etc. Therefore, the tables are strictly segregated into two correlation paths:
+
+### List of Tables by Category
+
+**Master Tables (The Hub)**
+*   `formulas`: Master list of all unique standardized chemical formulas.
+*   `materials`: List of specific crystal structures (mapped to `material_id`).
+
+**Material-Specific Properties (1:1 with `materials`)**
+*   `properties_core`: Basic properties like density, band gap, and stability.
+*   `properties_dielectric`: Dielectric tensors and refractive indices.
+*   `properties_elastic`: Elastic and mechanical tensors.
+
+**Experimental & Structural Data (1:N with `formulas`)**
+*   `experiments_battery`: Experimental band gap measurements.
+*   `experiments_steel`: Mechanical properties of various steel alloys.
+*   `structures_phonons`: Phonon vibrational modes.
+*   `structures_mp_gap`: A large dataset of calculated band gaps mapped to 3D structures.
+
+### Path A: Material-Specific Correlations (1:1 Joins)
+Use **`material_id`** to join tables that describe specific crystal structures.
+*   **`materials`**: The master lookup table mapping `material_id` to its parent `standard_formula`.
+*   **`properties_core`**, **`properties_dielectric`**, **`properties_elastic`**: These tables are 1:1 with `materials`. 
+*   **Query Example:** To correlate elastic anisotropy with band gaps:
+    ```sql
+    SELECT c.band_gap, e.elastic_anisotropy 
+    FROM properties_core c 
+    JOIN properties_elastic e ON c.material_id = e.material_id;
+    ```
+
+### Path B: Formula-Specific Correlations (1:N Joins)
+Use **`standard_formula`** to join experimental or structural datasets where the specific polymorph `material_id` is unknown or irrelevant.
+*   **`formulas`**: The master lookup table for all unique standardized compositions (e.g., `LiCoO2`).
+*   **`experiments_battery`**, **`experiments_steel`**, **`structures_phonons`**, **`structures_mp_gap`**: These tables are 1:N with `formulas`.
+*   **Query Example:** To correlate calculated PBE gaps with experimental battery gaps:
+    ```sql
+    SELECT b.`gap expt`, p.`gap pbe` 
+    FROM experiments_battery b 
+    JOIN structures_mp_gap p ON b.standard_formula = p.standard_formula;
+    ```
+
+---
+
 ## Data Science Recommendations
-- **Correlation Merging:** The datasets can be merged/joined using `formula` or `material_id` where applicable.
-- **Structural Parsing:** Fields like `structure`, `cif`, and `poscar` contain raw string or JSON representations. They will need to be parsed using `pymatgen` or converted into numerical features using `matminer` featurizers before feeding them into scikit-learn or deep learning models.
-- **Handling NaN/Missing:** Some thermodynamic values (like `formation_energy_per_atom` in the core dataset) may contain null values if uncalculated.
+-   **Direct Database Queries:** Do not parse the raw CSVs. Connect directly to `data/materials.db` using Python's `sqlite3` or `sqlalchemy` and `pandas.read_sql()`. The ETL pipeline has already cleansed and standardized all formula strings for you.
+-   **Structural Featurization:** If you are building ML models using the `structures_phonons` or `structures_mp_gap` tables, you will need to parse the JSON `structure` strings using `pymatgen` and featurize them using `matminer` (e.g., `SineCoulombMatrix` or `SiteStatsFingerprint`) before training.
