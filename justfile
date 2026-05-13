@@ -23,3 +23,11 @@ download *args:
 # Import downloaded CSVs to SQLite database
 import:
     docker-compose run --rm --build importer python -m src.main --action import
+
+# Start the EDA Apache Superset Dashboard
+eda-up:
+    docker-compose up -d superset superset-init
+
+# Stop the EDA Apache Superset Dashboard
+eda-down:
+    docker-compose stop superset superset-redis superset-init

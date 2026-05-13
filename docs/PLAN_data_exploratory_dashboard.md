@@ -197,10 +197,12 @@ Ranked Table
 ### Suggested Derived Score
 
 ```sql
+-- NOTE: 47% of rows have band_gap=0 (metals) and 22% have energy_above_hull=0 (stable materials).
+-- NULLIF + epsilon (1e-6) prevents division-by-zero while keeping all materials in the ranking.
 material_score =
-    (1 / density) * 0.3 +
-    (1 / band_gap) * 0.3 +
-    (1 / energy_above_hull) * 0.4
+    (1.0 / NULLIF(density, 0)) * 0.3 +
+    (1.0 / (NULLIF(band_gap, 0) + 1e-6)) * 0.3 +
+    (1.0 / (energy_above_hull + 1e-6)) * 0.4
 ```
 
 ### Columns
@@ -260,7 +262,7 @@ Scatter Plot
 SELECT
     c.material_id,
     c.band_gap,
-    d.e_total
+    d.poly_total
 FROM properties_core c
 JOIN properties_dielectric d
     ON c.material_id = d.material_id
@@ -268,7 +270,7 @@ JOIN properties_dielectric d
 
 ### Axes
 - X = band_gap
-- Y = e_total
+- Y = poly_total
 
 ---
 
@@ -297,14 +299,30 @@ JOIN properties_elastic e
 ### Chart Type
 Filtered Table
 
-### Filter
-- pot_ferroelectric = true
+### Dataset
+`Virtual: Ferroelectric Candidates`
+
+### Virtual Dataset SQL
+```sql
+SELECT
+    m.standard_formula,
+    c.energy_above_hull,
+    c.band_gap,
+    d.poly_total,
+    d.n
+FROM properties_dielectric d
+JOIN properties_core c ON d.material_id = c.material_id
+JOIN materials m ON d.material_id = m.material_id
+WHERE d.pot_ferroelectric = 1
+ORDER BY c.energy_above_hull ASC
+```
 
 ### Display Columns
-- formula
+- standard_formula
+- energy_above_hull (Stability)
 - band_gap
-- e_total
-- poly_total
+- poly_total (Dielectric Constant)
+- n (Refractive Index)
 
 ---
 
@@ -452,15 +470,49 @@ Ranked Interactive Table
 ### Chart Type
 Bubble Scatter Plot
 
-### Axes
+### Dataset
+`Virtual: Multi-Objective Optimization (Top Candidates)` — top 100 ranked candidates at material_id level
+
+### Virtual Dataset SQL
+```sql
+-- Top 100 battery candidates ranked by a composite stability score.
+-- Only non-metals are included (metals are short-circuit risks for battery cathodes).
+-- Row count is capped at 100 so bubbles are readable without overlap.
+SELECT
+    p.material_id,
+    m.standard_formula,
+    p.crystal_system,
+    ROUND(p.density, 4)               AS density,
+    ROUND(p.band_gap, 4)              AS band_gap,
+    ROUND(p.energy_above_hull, 4)     AS energy_above_hull,
+    -- stability_score: high = stable + lightweight + conductive
+    ROUND(
+        (1.0 - (p.density / 26.58))                       * 0.3 +
+        (1.0 - ABS(p.band_gap - 1.5) / 17.89)            * 0.3 +
+        (1.0 - (p.energy_above_hull / 9.71))              * 0.4,
+    4) AS stability_score
+FROM properties_core p
+JOIN materials m ON p.material_id = m.material_id
+WHERE p.is_metal = 0
+  AND p.density IS NOT NULL
+  AND p.band_gap IS NOT NULL
+  AND p.energy_above_hull IS NOT NULL
+ORDER BY stability_score DESC
+LIMIT 100
+```
+
+### Chart Parameters
 - X = density
 - Y = band_gap
+- Bubble Size = stability_score _(larger = higher ranked candidate)_
+- Series = crystal_system _(colors bubbles by crystal family)_
+- Entity = standard_formula
+- Row Limit = 100
 
-### Bubble Size
-- stability score
-
-### Color
-- future cost index
+> **Design rationale:** Top 100 pre-ranked materials keeps the chart readable while
+> still showing individual `material_id` candidates. Hover over any bubble to see
+> the formula. The biggest bubbles in the bottom-left (low density, low band_gap)
+> are the highest-priority battery candidates.
 
 ---
 
@@ -487,79 +539,6 @@ Markdown Panel
 
 ---
 
-# Dashboard 6 — Data Quality & Coverage
-
-## Goal
-Demonstrate engineering maturity, ETL governance, and scientific dataset integrity.
-
-This dashboard is strategically important.
-
----
-
-# Primary Tables
-All datasets
-
----
-
-# Key Business Questions
-- How complete are the datasets?
-- What coverage exists between datasets?
-- How successful was normalization?
-- What relationships are available for downstream AI workflows?
-
----
-
-# Recommended Visualizations
-
-## 1. Missing Values Analysis
-### Chart Type
-Heatmap / Table
-
-### Metrics
-Missing values by:
-- table
-- field
-- percentage
-
----
-
-## 2. Dataset Coverage Summary
-### Chart Type
-KPI Cards
-
-### Metrics
-- formulas with material mappings
-- materials with dielectric properties
-- materials with elastic properties
-- formulas with phonon data
-
----
-
-## 3. Formula Normalization Success
-### Chart Type
-KPI + Table
-
-### Metrics
-- raw formulas processed
-- standardized formulas generated
-- normalization success rate
-
----
-
-## 4. Dataset Relationship Coverage
-### Chart Type
-Relationship Matrix / Sankey
-
-### Goal
-Show relationship density across:
-- formulas
-- materials
-- properties_core
-- properties_elastic
-- properties_dielectric
-- experiments_battery
-
----
 
 # Recommended Presentation Sequence
 
@@ -567,8 +546,9 @@ Show relationship density across:
 1. Material Landscape Overview
 2. Battery Material Intelligence
 3. Stability & Conductivity Analytics
-4. AI Recommendation Workbench
-5. Data Quality & Coverage
+4. Mechanical & Structural Intelligence
+5. AI Recommendation Workbench
+6. Data Quality & Coverage _(removed from this plan — rebuild if needed)_
 
 ---
 
