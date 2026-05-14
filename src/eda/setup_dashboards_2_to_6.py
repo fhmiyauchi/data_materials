@@ -10,7 +10,7 @@ def setup():
     from superset.connectors.sqla.models import SqlaTable
     from superset.models.dashboard import Dashboard
 
-    database = db.session.query(Database).filter_by(database_name='NEDGEX_Materials').first()
+    database = db.session.query(Database).filter_by(database_name='Materials').first()
 
     # 1. Register Remaining Physical Tables
     tables = [

@@ -31,3 +31,16 @@ eda-up:
 # Stop the EDA Apache Superset Dashboard
 eda-down:
     docker-compose stop superset superset-redis superset-init
+
+# Prepare the AI Layer (Feature Engineering + Embeddings)
+ai-prepare:
+    docker-compose run --rm --build importer python -m src.ai.build_ai_dataset
+    docker-compose run --rm importer python -m src.ai.build_vector_store
+
+# Test semantic retrieval
+ai-test:
+    docker-compose run --rm importer python -m src.ai.test_retrieval
+
+# Run the AI Streamlit Dashboard
+ai-up:
+    docker-compose run --rm -p 8501:8501 importer streamlit run src/ai/app.py --server.port 8501 --server.address 0.0.0.0
