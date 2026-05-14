@@ -1,4 +1,4 @@
-# NEDGEX Data Architecture & Relational Schema
+# Data Architecture & Relational Schema
 
 This document outlines the Star Schema relational database architecture implemented by the `DataTransformer` ETL pipeline. This pipeline normalizes raw Materials Science datasets into a cleansed SQLite database (`data/materials.db`), ensuring reliable table joins and correlation analytics.
 

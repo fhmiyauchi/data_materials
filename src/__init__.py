@@ -1,1 +1,1 @@
-"""Source package for NEDGEX Data Importer."""
+"""Source package for Material Data Importer."""

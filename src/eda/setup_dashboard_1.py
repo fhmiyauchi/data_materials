@@ -12,7 +12,7 @@ def setup():
     from superset.models.dashboard import Dashboard
 
     # 1. Create Database
-    db_name = 'NEDGEX_Materials'
+    db_name = 'Materials'
     database = db.session.query(Database).filter_by(database_name=db_name).first()
     if not database:
         print(f"Creating database {db_name}...")

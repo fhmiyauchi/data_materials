@@ -6,3 +6,9 @@ mypy
 pandas-stubs
 matminer
 sqlalchemy
+chromadb
+sentence-transformers
+langchain
+langchain-community
+langchain-openai
+streamlit

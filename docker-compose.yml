@@ -1,7 +1,7 @@
 services:
   importer:
     build: .
-    container_name: nedgex-importer
+    container_name: data-importer
     env_file:
       - .env
     volumes:

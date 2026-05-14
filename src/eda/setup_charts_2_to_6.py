@@ -11,7 +11,7 @@ def setup():
     from superset.models.slice import Slice
     from superset.models.dashboard import Dashboard
 
-    db_name = 'NEDGEX_Materials'
+    db_name = 'Materials'
     database = db.session.query(Database).filter_by(database_name=db_name).first()
 
     if not database:

@@ -1,6 +1,6 @@
 # Materials Intelligence Dataset Documentation
 
-This document describes the datasets exported and compiled by the NEDGEX Data Importer. This data is structured and ready for exploratory data analysis (EDA), correlation analytics, and predictive ML modeling.
+This document describes the datasets exported and compiled by the Data Importer. This data is structured and ready for exploratory data analysis (EDA), correlation analytics, and predictive ML modeling.
 
 ---
 
@@ -133,7 +133,7 @@ This document describes the datasets exported and compiled by the NEDGEX Data Im
 Following the ETL pipeline transformation, the raw datasets above are no longer isolated CSVs. They have been tightly integrated into a **Star Schema** within `data/materials.db` to allow seamless correlation analytics. 
 
 ## 1. Master Formulas (Generated)
-**Source:** NEDGEX ETL Pipeline (`data_transformer.py`)  
+**Source:** ETL Pipeline (`data_transformer.py`)  
 **Table:** `formulas` (SQLite)  
 **Records:** 107,408  
 **Description:** The centralized root lookup table for all unique chemical compositions across every dataset. The pipeline standardizes every formula into a reduced alphabetical string using `pymatgen` to guarantee 100% accurate JOINs.
@@ -142,7 +142,7 @@ Following the ETL pipeline transformation, the raw datasets above are no longer 
 - `standard_formula`: Primary Key (e.g., `LiCoO2`).
 
 ## 2. Master Materials (Generated)
-**Source:** NEDGEX ETL Pipeline (`data_transformer.py`)  
+**Source:** ETL Pipeline (`data_transformer.py`)  
 **Table:** `materials` (SQLite)  
 **Records:** 154,879  
 **Description:** The master mapping table linking specific structural polymorphs to their parent formula. 
